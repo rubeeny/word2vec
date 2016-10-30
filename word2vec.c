@@ -111,7 +111,7 @@ void ReadWord(char *word, FILE *fin) {
     a++;
     if (a >= MAX_STRING - 1) a--;   // Truncate too long words
   }
-  word[a] = 0;
+  word[a] = 0;//标识字符数组的结束‘\0’
 }
 
 // Returns hash value of a word
@@ -123,7 +123,7 @@ int GetWordHash(char *word) {
 }
 
 // Returns position of a word in the vocabulary; if the word is not found, returns -1
-// 返回一个词在词典中的位置,如果不存在则返回-1
+// 返回一个词在词典中的位置,如果不存在则返回-1--------采用线性探测法解决hash冲突
 int SearchVocab(char *word) {
   unsigned int hash = GetWordHash(word);
   while (1) {
@@ -150,20 +150,20 @@ int AddWordToVocab(char *word) {
   if (length > MAX_STRING) length = MAX_STRING;
   vocab[vocab_size].word = (char *)calloc(length, sizeof(char));
   strcpy(vocab[vocab_size].word, word);
-  vocab[vocab_size].cn = 0;
+  vocab[vocab_size].cn = 0;//在调用函数中赋值为1。
   vocab_size++;
   // Reallocate memory if needed
-  if (vocab_size + 2 >= vocab_max_size) {
+  if (vocab_size + 2 >= vocab_max_size) {//词典大小接近vocab_max_size时，扩容1000
     vocab_max_size += 1000;
     vocab = (struct vocab_word *)realloc(vocab, vocab_max_size * sizeof(struct vocab_word));
   }
   hash = GetWordHash(word);	// 获得hash
   while (vocab_hash[hash] != -1) hash = (hash + 1) % vocab_hash_size;	// 线性探测开放定制法
   vocab_hash[hash] = vocab_size - 1;	// 指向处理的词的索引
-  return vocab_size - 1;
+  return vocab_size - 1;//返回添加的单词在词典中的位置
 }
 
-// Used later for sorting by word counts
+// Used later for sorting by word counts 比较函数，按词频进行排序
 int VocabCompare(const void *a, const void *b) {
     return ((struct vocab_word *)b)->cn - ((struct vocab_word *)a)->cn;
 }
@@ -174,9 +174,9 @@ void SortVocab() {
   int a, size;
   unsigned int hash;
   // Sort the vocabulary and keep </s> at the first position
-  // 将</s>放在第一个位置
-  qsort(&vocab[1], vocab_size - 1, sizeof(struct vocab_word), VocabCompare);
-  for (a = 0; a < vocab_hash_size; a++) vocab_hash[a] = -1;
+  // 将</s>放在第一个位置------</s>表示回车
+  qsort(&vocab[1], vocab_size - 1, sizeof(struct vocab_word), VocabCompare);//词典进行快速排序，第一个是回车不参与排序
+  for (a = 0; a < vocab_hash_size; a++) vocab_hash[a] = -1;//词典已经重排，需重建vocab_hash
   size = vocab_size;
   train_words = 0;
   for (a = 0; a < size; a++) {
@@ -193,10 +193,10 @@ void SortVocab() {
       train_words += vocab[a].cn;	// 重新计算训练词数量
     }
   }
-  vocab = (struct vocab_word *)realloc(vocab, (vocab_size + 1) * sizeof(struct vocab_word));
+  vocab = (struct vocab_word *)realloc(vocab, (vocab_size + 1) * sizeof(struct vocab_word));//分配的多余空间收回
   // Allocate memory for the binary tree construction
   for (a = 0; a < vocab_size; a++) {
-    vocab[a].code = (char *)calloc(MAX_CODE_LENGTH, sizeof(char));
+    vocab[a].code = (char *)calloc(MAX_CODE_LENGTH, sizeof(char));//给哈弗曼树编码和路径分配空间
     vocab[a].point = (int *)calloc(MAX_CODE_LENGTH, sizeof(int));
   }
 }
