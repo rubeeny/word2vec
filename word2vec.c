@@ -36,35 +36,35 @@ struct vocab_word {
   codelen;	// 编码长度
 };
 
-char train_file[MAX_STRING],	// 训练文本
-	output_file[MAX_STRING];	// 输出词向量文件
+char train_file[MAX_STRING],	// 保存 训练文本 文件名
+	output_file[MAX_STRING];	// 保存 输出词向量文件名
 char save_vocab_file[MAX_STRING],	// 保存词典到文件
 	read_vocab_file[MAX_STRING];	// 读取词典文件,而不是从训练数据生成词典
 struct vocab_word *vocab;	// 词典
 int binary = 0,	// 表示输出的结果文件是否采用二进制存储，0表示不使用（即普通的文本存储，可以打开查看），1表示使用，即vectors.bin的存储类型
 	cbow = 1,	// 是否使用cbow模型，0表示使用skip-gram模型，1表示使用cbow模型，默认情况下是skip-gram模型
-	debug_mode = 2,	// TODO
+	debug_mode = 2,	// 大于0，加载完后，输出汇总信息；大于1，加载训练词汇的时候输出信息，训练过程中输出信息
 	window = 5,	// 训练的窗口大小
 	min_count = 5,	// 表示设置最低频率，默认为5，如果一个词语在文档中出现的次数小于该阈值，那么该词就会被舍弃
 	num_threads = 12,	// 线程个数
 	min_reduce = 1;	// 构建词典时,词频小于该值则舍弃
-int *vocab_hash;	// 词典哈希表
-long long vocab_max_size = 1000,
-		vocab_size = 0,	// 词典大小,当前处理的词的序号
-		layer1_size = 100;	// 词向量纬度
+int *vocab_hash;	// 词典哈希表，下标是词的hash，值是词在vocab中的索引
+long long vocab_max_size = 1000,//词典的最大长度，可以扩增，每次扩1000
+		vocab_size = 0,	// 词典大小,当前处理的词的序号-----------词典的当前大小，当接近vocab_max_size的时候会扩充
+		layer1_size = 100;	// 词向量纬度--------隐藏层节点数
 long long train_words = 0,	// 训练文本中的单词总数（词频累加）
 		word_count_actual = 0,	// 已经训练完的word个数
 		iter = 5,	// 训练迭代次数
 		file_size = 0,	// 训练文件大小，ftell得到
 		classes = 0;	// 输出词类别而不是词向量,默认输出词向量
-real alpha = 0.025,	// 学习率
+real alpha = 0.025,	// 学习率，训练过程自动调整
 		starting_alpha,	// 初始学习率,从alpha开始自适应变化
 		sample = 1e-3;	// 采样的阈值，如果一个词在训练样本中出现的频率越大，那么就越会被采样
 real *syn0,	// 输入词向量,所有词都存在里面,可看出[vacab_size][layer1_size]的二维数组
 	*syn1,	// binary tree非叶节点的参数向量
 	*syn1neg,	// NEG时,负样本对应的词向量,为辅助参数向量
 	*expTable;	// 自然指数查找表
-clock_t start;
+clock_t start;//算法运行的开始时间，会用于计算平均每秒钟处理多少词
 
 int hs = 0,	// 是否使用HS方法，0表示不使用，1表示使用
 	negative = 5;	// 表示是否使用NEG方法,指定负采样数量
@@ -74,15 +74,15 @@ int *table;	// 负采样表
 // 根据词频生成负采样表用于negative sampling
 void InitUnigramTable() {
   int a, i;
-  double train_words_pow = 0;
+  double train_words_pow = 0;//训练文本每个词的词频的0.75次方的累加和
   double d1, power = 0.75;
   table = (int *)malloc(table_size * sizeof(int));
   for (a = 0; a < vocab_size; a++) train_words_pow += pow(vocab[a].cn, power);	// 求出总的计数
-  i = 0;
-  d1 = pow(vocab[i].cn, power) / train_words_pow;
-  for (a = 0; a < table_size; a++) {	// 得出映射关系
+  i = 0;//词在词典中的索引
+  d1 = pow(vocab[i].cn, power) / train_words_pow;//第一个词的概率长度，后面用于对每个词的概率进行累加，最后为1.有点像轮盘赌算法
+  for (a = 0; a < table_size; a++) {	// 得出映射关系-----进行采样等到采样表
     table[a] = i;
-    if (a / (double)table_size > d1) {
+    if (a / (double)table_size > d1) {//若等分点，大于当前词的概率
       i++;
       d1 += pow(vocab[i].cn, power) / train_words_pow;
     }
@@ -91,6 +91,7 @@ void InitUnigramTable() {
 }
 
 // Reads a single word from a file, assuming space + tab + EOL to be word boundaries
+//每次从fin中读取一个单词
 void ReadWord(char *word, FILE *fin) {
   int a = 0, ch;
   while (!feof(fin)) {	// 文件未结束
