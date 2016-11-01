@@ -53,12 +53,12 @@ int main(int argc, char **argv) {
   fscanf(f, "%lld", &size);
   vocab = (char *)malloc((long long)words * max_w * sizeof(char));
   for (a = 0; a < N; a++) bestw[a] = (char *)malloc(max_size * sizeof(char));
-  M = (float *)malloc((long long)words * (long long)size * sizeof(float));
+  M = (float *)malloc((long long)words * (long long)size * sizeof(float));//存储每个词的单位化后的词向量
   if (M == NULL) {
     printf("Cannot allocate memory: %lld MB    %lld  %lld\n", (long long)words * size * sizeof(float) / 1048576, words, size);
     return -1;
   }
-  for (b = 0; b < words; b++) {
+  for (b = 0; b < words; b++) {//从f中读取每个词并放入vocab中，和词向量，归一化后放入M中
     a = 0;
     while (1) {	// 读取一个词
       vocab[b * max_w + a] = fgetc(f);	// 读一个字符
@@ -72,21 +72,21 @@ int main(int argc, char **argv) {
     len = sqrt(len);	// 得向量长度
     for (a = 0; a < size; a++) M[a + b * size] /= len;	// 单位化词向量
   }
-  fclose(f);
+  fclose(f);//已完成，每个词并放入vocab中，和词向量，归一化后放入M中
   while (1) {
-    for (a = 0; a < N; a++) bestd[a] = 0;
-    for (a = 0; a < N; a++) bestw[a][0] = 0;
+    for (a = 0; a < N; a++) bestd[a] = 0;// bestd存储每个相似词的相似度
+    for (a = 0; a < N; a++) bestw[a][0] = 0;//bestw存储最近的N个词
     printf("Enter word or sentence (EXIT to break): ");
     a = 0;
     while (1) {	// 读取用户的输入
-      st1[a] = fgetc(stdin);
+      st1[a] = fgetc(stdin);//st1 用户输入的词 可以有多个
       if ((st1[a] == '\n') || (a >= max_size - 1)) {
-        st1[a] = 0;	// 以0结尾
+        st1[a] = 0;	// 以0结尾 --读完一行或者达到max_size
         break;
       }
       a++;
     }
-    if (!strcmp(st1, "EXIT")) break;	// 退出
+    if (!strcmp(st1, "EXIT")) break;	// 退出,但 EXIT 不能输入多个词
     cn = 0;
     b = 0;
     c = 0;
@@ -102,12 +102,12 @@ int main(int argc, char **argv) {
         c++;
       }
     }
-    cn++;
+    cn++;//用户输入的词数
     for (a = 0; a < cn; a++) {
       for (b = 0; b < words; b++) if (!strcmp(&vocab[b * max_w], st[a])) break;	// 在词典中寻找相等的词
       if (b == words) b = -1;	// 没找到
-      bi[a] = b;
-      printf("\nWord: %s  Position in vocabulary: %lld\n", st[a], bi[a]);
+      bi[a] = b;  // bi 存储用户输入词的在词典中的索引
+      printf("\nWord: %s  Position in vocabulary: %lld\n", st[a], bi[a]);// st 存储用户输入的词(词组)
       if (b == -1) {
         printf("Out of dictionary word!\n");
         break;
@@ -115,36 +115,36 @@ int main(int argc, char **argv) {
     }
     if (b == -1) continue;	// 不存在,重新输入词
     printf("\n                                              Word       Cosine distance\n------------------------------------------------------------------------\n");
-    for (a = 0; a < size; a++) vec[a] = 0;
+    for (a = 0; a < size; a++) vec[a] = 0;// vec 存储用户输入词的词向量,词组则是累加向量
     for (b = 0; b < cn; b++) {	// 累加用户输入的词(词组)对应的词向量到vec
       if (bi[b] == -1) continue;	// 应该不会再等于-1吧
       for (a = 0; a < size; a++) vec[a] += M[a + bi[b] * size];
     }
-    len = 0;
+    len = 0;//用户输入词的词向量的长度
     for (a = 0; a < size; a++) len += vec[a] * vec[a];	// 平方和
     len = sqrt(len);
     for (a = 0; a < size; a++) vec[a] /= len;	// 单位化
-    for (a = 0; a < N; a++) bestd[a] = -1;	// 初始化相似度为0
+    for (a = 0; a < N; a++) bestd[a] = -1;	// 初始化相似度为-1
     for (a = 0; a < N; a++) bestw[a][0] = 0;	// 初始化相似词为空(因为以0开头)
-    for (c = 0; c < words; c++) {
+    for (c = 0; c < words; c++) {//寻找与用户输入词最相近的N个词
       a = 0;
-      for (b = 0; b < cn; b++) if (bi[b] == c) a = 1;	// a = 1 表示当前词即为用户输入的词
+      for (b = 0; b < cn; b++) if (bi[b] == c) a = 1;	// a = 1 表示当前词即为用户输入的词   //用户输入的词数
       if (a == 1) continue;	// 跳过
       dist = 0;
-      for (a = 0; a < size; a++) dist += vec[a] * M[a + c * size];	// 计算余弦相似度
+      for (a = 0; a < size; a++) dist += vec[a] * M[a + c * size];	// 计算用户输入词和当前词的余弦相似度
       for (a = 0; a < N; a++) {	// 相似度在前N个,则加入到bestd中
-        if (dist > bestd[a]) {
-          for (d = N - 1; d > a; d--) {	// 后移
+        if (dist > bestd[a]) {//余弦相似度大，这里不是距离相近和KNN不同
+          for (d = N - 1; d > a; d--) {	// 后移，并插入
             bestd[d] = bestd[d - 1];
             strcpy(bestw[d], bestw[d - 1]);
           }
           bestd[a] = dist;
-          strcpy(bestw[a], &vocab[c * max_w]);
+          strcpy(bestw[a], &vocab[c * max_w]);//把当前词，从词典复制到bestw中的对应位置
           break;
         }
       }
     }
-    for (a = 0; a < N; a++) printf("%50s\t\t%f\n", bestw[a], bestd[a]);	// 输出
+    for (a = 0; a < N; a++) printf("%50s\t\t%f\n", bestw[a], bestd[a]);	// 输出 bestw存储与用户最相近的N个词，bestd对应的存储相似度
   }
   return 0;
 }
