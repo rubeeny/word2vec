@@ -221,30 +221,30 @@ void TrainModel() {
       fprintf(fo, "\n");
       continue;
     }
-    cn++;
+    cn++;//读入词个数
     if ((debug_mode > 1) && (cn % 100000 == 0)) {
       printf("Words written: %lldK%c", cn / 1000, 13);
       fflush(stdout);
     }
-    oov = 0;
+    oov = 0;//标志能不能构成短语 1不能
     i = SearchVocab(word);	// 获取该词的在词典中的位置,-1表示词典不存在该词
     if (i == -1) oov = 1;	// 不能构成短语
     else pb = vocab[i].cn;	// 保存该词的词频
     if (li == -1) oov = 1;	//
-    li = i;	// 记录该词的状态,处理下一个词时使用
+    li = i;	// 记录该词的状态,处理下一个词时使用-----记录该词在词典中的位置
     sprintf(bigram_word, "%s_%s", last_word, word);	// 合成短语
-    bigram_word[MAX_STRING - 1] = 0;
+    bigram_word[MAX_STRING - 1] = 0;//短语的分隔符
     i = SearchVocab(bigram_word);	// 获取该短语的在词典中的位置
-    if (i == -1) oov = 1;
-    else pab = vocab[i].cn;	// 保存短语的词频
-    if (pa < min_count) oov = 1;	// 当个词出现次数太少,也不能构成词组
+    if (i == -1) oov = 1;//不存在该短语
+    else pab = vocab[i].cn;	// 保存该短语的词频
+    if (pa < min_count) oov = 1;	// 当前词出现次数太少,也不能构成词组
     if (pb < min_count) oov = 1;
     if (oov) score = 0; 	// 不能构成短语
     else score = (pab - min_count) / (real)pa / (real)pb * (real)train_words;	// 计算该短语得分
     if (score > threshold) {	// 得分大于阈值则构成短语成功
       fprintf(fo, "_%s", word);	// 输出当前词和上一个词用_连接起来
       pb = 0;
-    } else fprintf(fo, " %s", word);	// 输出当前次,与上一个词用空格隔开
+    } else fprintf(fo, " %s", word);	// 输出当前词,与上一个词用空格隔开
     pa = pb;
   }
   fclose(fo);
