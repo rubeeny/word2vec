@@ -63,14 +63,14 @@ int main(int argc, char **argv)
   if (threshold) if (words > threshold) words = threshold;	// 缩小词典
   fscanf(f, "%lld", &size);
   vocab = (char *)malloc(words * max_w * sizeof(char));
-  M = (float *)malloc(words * size * sizeof(float));
+  M = (float *)malloc(words * size * sizeof(float));//size 为词向量维度
   if (M == NULL) {
     printf("Cannot allocate memory: %lld MB\n", words * size * sizeof(float) / 1048576);
     return -1;
   }
-  for (b = 0; b < words; b++) {
+  for (b = 0; b < words; b++) {//把所有词读入并放入vocab中，归一化词向量放入M中
     a = 0;
-    while (1) {		// 读取一个词
+    while (1) {		// 读取一个词，
       vocab[b * max_w + a] = fgetc(f);
       if (feof(f) || (vocab[b * max_w + a] == ' ')) break;
       if ((a < max_w) && (vocab[b * max_w + a] != '\n')) a++;
@@ -78,14 +78,14 @@ int main(int argc, char **argv)
     vocab[b * max_w + a] = 0;	// 每个词以0结尾
     for (a = 0; a < max_w; a++) vocab[b * max_w + a] = toupper(vocab[b * max_w + a]);	// 转换为大写字符
     for (a = 0; a < size; a++) fread(&M[a + b * size], sizeof(float), 1, f);	// 读取该词对应的词向量
-    len = 0;
+    len = 0;//词向量的长度
     for (a = 0; a < size; a++) len += M[a + b * size] * M[a + b * size];
-    len = sqrt(len);
+    len = sqrt(len);//词向量的长度
     for (a = 0; a < size; a++) M[a + b * size] /= len;	// 单位化词向量
   }
   fclose(f);
   TCN = 0;
-  while (1) {
+  while (1) {//计算正确率
     for (a = 0; a < N; a++) bestd[a] = 0;
     for (a = 0; a < N; a++) bestw[a][0] = 0;
     scanf("%s", st1);	// 读取word1
@@ -151,8 +151,8 @@ int main(int argc, char **argv)
       if (QID <= 5) SEAC++; 		// 前5类是semantic类别,semantic正确数加1
       else SYAC++;	// 后面的类都是syntatic类,加1
     }
-    if (QID <= 5) SECN++;
-    else SYCN++;
+    if (QID <= 5) SECN++;//semantic类别处理个数加1
+    else SYCN++;//syntatic类别处理个数加1
     TCN++;	// 该类别处理个数加1
     TACN++; // 总处理个数加1
   }
