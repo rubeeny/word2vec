@@ -57,7 +57,7 @@ int main(int argc, char **argv) {
     printf("Cannot allocate memory: %lld MB    %lld  %lld\n", (long long)words * size * sizeof(float) / 1048576, words, size);
     return -1;
   }
-  for (b = 0; b < words; b++) {	// 读取词典所有词
+  for (b = 0; b < words; b++) {	// 读取词典所有词 并把词放入vocab中，归一化词向量放入M中
     a = 0;
     while (1) {	// 读取一个词
       vocab[b * max_w + a] = fgetc(f);	// 读一个字符
@@ -109,7 +109,7 @@ int main(int argc, char **argv) {
     for (a = 0; a < cn; a++) {
       for (b = 0; b < words; b++) if (!strcmp(&vocab[b * max_w], st[a])) break;	// 在词典中寻找相等的词
       if (b == words) b = 0;	// 没找到
-      bi[a] = b;
+      bi[a] = b;//存放用户输入词，在词典中的索引
       printf("\nWord: %s  Position in vocabulary: %lld\n", st[a], bi[a]);
       if (b == 0) {
         printf("Out of dictionary word!\n");
