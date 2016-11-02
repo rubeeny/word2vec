@@ -155,7 +155,7 @@ void ReduceVocab() {
   min_reduce++;
 }
 
-void LearnVocabFromTrainFile() {
+void LearnVocabFromTrainFile() {//把词读入词典中，同时用当前词与上一词，生成二词组，也同时放入词典中
   char word[MAX_STRING], last_word[MAX_STRING], bigram_word[MAX_STRING * 2];
   FILE *fin;
   long long a, i, start = 1;
@@ -170,7 +170,7 @@ void LearnVocabFromTrainFile() {
   while (1) {
     ReadWord(word, fin);
     if (feof(fin)) break;
-    if (!strcmp(word, "</s>")) {
+    if (!strcmp(word, "</s>")) {//一行读入完毕，start标志一行是否读取完毕
       start = 1;
       continue;
     } else start = 0;
@@ -184,8 +184,8 @@ void LearnVocabFromTrainFile() {
       a = AddWordToVocab(word);
       vocab[a].cn = 1;
     } else vocab[i].cn++;
-    if (start) continue;
-    sprintf(bigram_word, "%s_%s", last_word, word);
+    if (start) continue;//一行读入完毕，start标志一行是否读取完毕
+    sprintf(bigram_word, "%s_%s", last_word, word);//用当前词和上一词生成 二词组
     bigram_word[MAX_STRING - 1] = 0;
     strcpy(last_word, word);
     i = SearchVocab(bigram_word);
